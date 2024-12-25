@@ -18,7 +18,7 @@ The improved method:
   <img src="https://github.com/MrChen1123/TCMonoDepth/icon/improved valid mask.png">
 </div>
 
-2. The improvement of the temporal consistency loss
+2. The improvement of the temporal consistency loss.
 The original tc loss is as follows:
 <div align="center">
   <img src="https://github.com/MrChen1123/TCMonoDepth/icon/tc loss.png">
@@ -36,7 +36,5 @@ python train.py
 ### Test ###
 python val.py
 
-## 参考
-- 算法参考paper <Enforcing Temporal Consistency in Video Depth Estimation>
-- 可对照paper看代码
-- paper中相关参数，试验发现达不到作者效果，自己尝试的参数，发现可行，研究者也可自行尝试参数配置
+## inference
+- [1] Enforcing Temporal Consistency in Video Depth Estimation
