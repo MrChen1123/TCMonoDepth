@@ -2,6 +2,7 @@
 
 #### This repository has implemented the training of the TCMonodepth and made improvements to it, enhancing the temporal consistency of TCMonodepth and the effect of monocular depth estimation for videos. ####
 
+![Example Image](https://github.com/MrChen1123/TCMonoDepth/icon/ori_structure.png)
 <div align="center">
   <img src="https://github.com/MrChen1123/TCMonoDepth/icon/ori_structure.png">
   <p>The algorithm architecture of the original paper</p>
