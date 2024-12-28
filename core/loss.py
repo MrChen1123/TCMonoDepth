@@ -34,35 +34,6 @@ class TC_loss(nn.Module):
         pass
         # self.l1_loss = nn.L1Loss(reduction='sum')
 
-    # def forward(self, raft_model, frames, pred_depths, gt_depths, mask):
-    #     backward_flows = calculate_flow(raft_model, frames, 'backward')  # [b, 1, 2, h, w]
-    #     backward_flows = torch.tensor(backward_flows).to(frames.device)
-    #     # forward_flows = calculate_flow(raft_model, frames, 'forward')  # [b, 1, 2, h, w]
-    #     # forward_flows = torch.tensor(forward_flows).to(frames.device)
-    #
-    #     frames_i = frames[:, 0, :, :, :]
-    #     frames_j = frames[:, 1, :, :, :]                                           # [b, 1, 2, h, w]
-    #     frames_j_i, mask_flow = warp(frames_j, backward_flows, need_flow_M=True)   # 只进行一次对齐
-    #     mask_flow = mask_flow.mean(dim=1, keepdim=True)
-    #     mm = mask_flow.detach().cpu().numpy()
-    #
-    #     pred_depths_i = pred_depths[:, 0, :, :, :]
-    #     pred_depths_j = pred_depths[:, 1, :, :, :]
-    #     pred_depths_j_i = warp(pred_depths_j, backward_flows)
-    #
-    #     gt_depths_i = gt_depths[:, 0, :, :, :]
-    #     gt_depths_j = gt_depths[:, 1, :, :, :]
-    #     gt_depths_j_i = warp(gt_depths_j, backward_flows)
-    #
-    #     w_tcloss = torch.norm((frames_i - frames_j_i), dim=1, keepdim=True)        # 计算2范数
-    #     w_tcloss = torch.pow(w_tcloss, 2)                                          # 2范数平方
-    #     w_tcloss = torch.exp(-torch.sigmoid(w_tcloss))                             # 越小
-    #
-    #     tc_loss = mask_flow * w_tcloss * torch.abs((pred_depths_i - pred_depths_j_i)-(gt_depths_i-gt_depths_j_i))
-    #     tc_loss = tc_loss.sum() / mask_flow.sum()
-    #     return tc_loss
-
-
     def forward(self, raft_model, frames, pred_depths, gt_depths, mask):
         backward_flows = calculate_flow(raft_model, frames, 'backward')   # [b, 1, 2, h, w]
         backward_flows = torch.tensor(backward_flows).to(frames.device)
@@ -158,16 +129,11 @@ class Silog_loss(nn.Module):
 
     def forward(self, depth_est, depth_gt, mask):
         d = torch.log(depth_est[mask]) - torch.log(depth_gt[mask])
-        # d1 = depth_est[mask] - depth_gt[mask]
-        # d_loss = (d ** 2).mean() / 2
-        # d1_loss = torch.abs(d1).mean()
         d_loss = torch.sqrt((d ** 2).mean() - self.variance_focus * (d.mean() ** 2))
-        # d_loss = 0.08 * d1_loss + d2_loss
         return d_loss
 
-
 class Total_loss(nn.Module):
-    def __init__(self, variance_focus=0.0, alpha=0.0, bata=0.0, lam=0.0):
+    def __init__(self, variance_focus=0.0, alpha=0.0, bata=0.0, lam=0.0, three_frames_mode=False):
         super(Total_loss, self).__init__()
         self.variance_focus = variance_focus
         self.alpha = alpha
@@ -176,13 +142,20 @@ class Total_loss(nn.Module):
         self.ng_loss = GradientLoss()
         self.tc_loss = TC_loss()
         self.silog_loss = Silog_loss(self.variance_focus)
+        self.three_frames_mode = three_frames_mode
 
-    def forward(self, raft_model, frames_valid, depth_est, depth_gt, mask):
-        tc_loss = self.lam * self.tc_loss(raft_model, frames_valid, depth_est, depth_gt, mask)        # 1    # raft_model, frames, pred_depths
-        ng_loss = self.alpha * self.ng_loss(depth_est, depth_gt, mask)                                # 0.5
-        silog_loss = self.bata * self.silog_loss(depth_est, depth_gt, mask)                           # 1    # depth_est, depth_gt, mask
+    def forward(self, raft_model, frames_valid, depth_est, depth_gt, mask):  # [b, frema_num, c, h, w]
+        total_loss, tc_loss, ng_loss, silog_loss = 0, 0, 0, 0
+        calc_times = 1                              
+        if self.three_frames_mode:
+            calc_times = 2       # calculates TC of the previous frame with the current frame and the current frame with the next frame.
+        for i in range(calc_times):
+            tc_loss += self.lam * self.tc_loss(raft_model, frames_valid[:, i:i+2, :,:], depth_est[:, i:i+2, :,:], depth_gt[:, i:i+2, :,:], mask[:, i:i+2, :,:])        
+            # 1    # raft_model, frames, pred_depths
+        ng_loss += self.alpha * self.ng_loss(depth_est, depth_gt, mask)                                    # 0.5
+        silog_loss += self.bata * self.silog_loss(depth_est, depth_gt, mask)                               # 1    # depth_est, depth_gt, mask
 
-        total_loss = tc_loss + ng_loss + silog_loss
+        total_loss += (tc_loss + ng_loss + silog_loss)
         return total_loss, tc_loss, ng_loss, silog_loss
 
 
@@ -210,19 +183,3 @@ def align_depth(depth_est, depth_gt, mask):
     depth_est = torch.exp(s_tensor) * depth_est
     depth_est = depth_est.view(b, t, c, h, w)
     return depth_est
-
-def align_depth_tensor1(depth_est, depth_gt, mask):
-    b, t, c, h, w = depth_gt.shape
-    x = torch.zeros_like(depth_gt)
-    if torch.any(depth_est==0):
-        print("depth_est zeros")
-    depth_est = torch.where(depth_est>0, torch.log(depth_est), x)
-    depth_gt = torch.where(depth_gt>0, torch.log(depth_gt), x)
-    a_0 = (mask * depth_gt).sum(dim=(3, 4))
-    b_0 = (mask * depth_est).sum(dim=(3, 4))
-    c_0 = mask.sum(dim=(3, 4)).float()
-    shift = (a_0 - b_0) / c_0
-    shift = shift.view(b, t, c, 1, 1)
-    depth_est_align = torch.exp(shift + depth_est)
-
-    return depth_est_align

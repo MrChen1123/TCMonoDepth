@@ -5,9 +5,6 @@ from PIL import Image, ImageEnhance
 import os
 import torch
 
-import matplotlib
-matplotlib.use('agg')
-
 def set_seeds(seed):
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
@@ -80,7 +77,7 @@ class Romdom_Crop():
         return img_grop, depth_grop
 
 
-class GroupRandomHorizontalFlip():
+class RandomHorizontalFlip():
     """Randomly horizontally flips the given PIL.Image with a probability of 0.5
     """
     def __init__(self):
@@ -203,15 +200,6 @@ def value1(s, gt, pred, M):
     dist = pred - gt
     return ((np.square(dist)).sum()) / (M.sum())
 
-def get_valid(mask):
-    b, t, c, h, w = mask.shape
-    valid = mask.sum(axis=(2, 3, 4))
-    valid = valid > 0
-    ssum = torch.tensor([True]*b, dtype=torch.bool, device=mask.device)
-    for v in range(b):
-        if (valid[v, :]).sum() < 2:
-            ssum[v] = torch.tensor([False], dtype=torch.bool, device=mask.device)
-    return ssum
 
 def get_world_size():
     """Find OMPI world size without calling mpi functions
@@ -258,55 +246,51 @@ def parse_args():
     # Settings
     parser = argparse.ArgumentParser(description="This is a PyTorch Implementation of TCMonoDepth")
     # model params
-    parser.add_argument('--model', default='large', choices=['small', 'large', 'dpt-large', 'dpt-hybrid'],
+    parser.add_argument('--model_type', default='dpt-large', choices=['small', 'large', 'dpt-large', 'dpt-hybrid'],
                         help='size of the model')
-    parser.add_argument('--backbone', default='vitl16_384', choices=['vitl16_384', 'vitb_rn50_384', 'vitb16_384'],
+    parser.add_argument('--backbone', default='vitb16_384', choices=['vitl16_384', 'vitb_rn50_384', 'vitb16_384'],
                         help='size of the model')
-    parser.add_argument('--resume', type=str, default='./weights/_ckpt_small.pt.tar', help='path to checkpoint file')
-
+    parser.add_argument('--resume', type=str, default='', help='resume model weight path')
+    parser.add_argument('--three_frmaes_mode', type=bool, default=False, help='if use three frames mode')
     # loss
-    parser.add_argument('--alpha', type=float, default=0.2, help='weighted to tc_loss')
-    parser.add_argument('--lam', type=float, default=1.0, help='weighted to tc_loss')
-    parser.add_argument('--bata', type=float, default=1.0, help='weighted to tc_loss')
+    parser.add_argument('--alpha', type=float, default=0.23, help='')
+    parser.add_argument('--lam', type=float, default=1.0, help='')
+    parser.add_argument('--bata', type=float, default=1.0, help='')
 
-    parser.add_argument('--weight_reg', type=float, default=0.5, help='weighted to tc_loss')
+    parser.add_argument('--weight_reg', type=float, default=0.5, help='')
     parser.add_argument('--variance_focus', type=float, default=0.85,
                         help='lambda in paper: [0, 1], higher value more focus on minimizing variance of error')
 
     # train params
-    parser.add_argument('--lr', type=float, default=1e-5, help='weighted to tc_loss')
-    parser.add_argument('--weight_decay', type=float, default=0.01, help='weighted to tc_loss')
-    parser.add_argument('--epoch', type=float, default=20, help='weighted to tc_loss')
-    parser.add_argument('--log_freq', type=float, default=10, help='weighted to tc_loss')
-    parser.add_argument('--depth_model_path', type=str, default="./weights/midas_v21-f6b98070.pt",
-                        help='weighted to tc_loss')
-    parser.add_argument('--opt_path', type=str, default="", help='weighted to tc_loss')
+    parser.add_argument('--lr', type=float, default=8e-6, help='learning rate')
+    parser.add_argument('--weight_decay', type=float, default=0.01, help='weight decay')
+    parser.add_argument('--epoch', type=float, default=15, help='total epoch nums')
+    parser.add_argument('--log_freq', type=float, default=20, help='save log frequency')
+    parser.add_argument('--depth_model_path', type=str, default="",
+                        help='RAFT model weights path')
+    parser.add_argument('--opt_path', type=str, default="", help='')
 
     # Data
-    parser.add_argument('--data_root', default='', type=str, help='video root path')
-    parser.add_argument('--train_file', default="./train_out_small_1_10.json", type=str, help='video train file')
-    parser.add_argument('--val_file', default="./test_out_small.json", type=str, help='video val file')
-    parser.add_argument('--batch_size', default=160, type=int, help='video val file')
-    parser.add_argument('--num_workers', default=10, type=int, help='video val file')
+    parser.add_argument('--data_root', default='', type=str, help='train data root path of videos')
+    parser.add_argument('--train_file', default="./datas/train.json", type=str, help='Paths to the training data, separated by commas')
+    parser.add_argument('--val_file', default="./datas/test.json", type=str, help='Paths to the test data, separated by commas')
+    parser.add_argument('--batch_size', default=8, type=int, help='batch size')
+    parser.add_argument('--num_workers', default=8, type=int, help='num workers')
 
-    parser.add_argument('--input', default='./videos1', type=str, help='video root path')
-    parser.add_argument('--output', default='./output2', type=str, help='path to save output')
+    parser.add_argument('--input', default='', type=str, help='video root path')
+    parser.add_argument('--output', default='', type=str, help='path to save output')
     parser.add_argument('--resize', type=int, default=[448, 320],
                         help="spatial dimension to resize input (default: small model:256, large model:384)")
     parser.add_argument('--input_size', type=int, default=[320, 224],
                         help="spatial dimension to resize input (default: small model:256, large model:384)")
 
-    parser.add_argument('--degree', default=5, type=float)
-
-    parser.add_argument('--port', default='23457', type=str)
+    parser.add_argument('--port', default='12345', type=str)
 
     # RAFT_model
-    parser.add_argument('--raft_model_path', default='./weights/raft-things.pth', help="restore checkpoint")
-    parser.add_argument('--small', action='store_true', help='use small model')
-    parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
-    parser.add_argument('--alternate_corr', action='store_true', help='use efficent correlation implementation')
+    parser.add_argument('--raft_model_path', default='', help="raft_model_path")
+    parser.add_argument('--small', action='store_true', help='if use small model')
 
     # save_dir
-    parser.add_argument('--save_dir', default='./checkpoints', help='use efficent correlation implementation')
+    parser.add_argument('--save_dir', default='./checkpoints', help='save weights dir')
     args = parser.parse_args()
     return args

@@ -7,8 +7,8 @@ import torch
 import torch.multiprocessing as mp
 
 from core.trainer import Trainer
-from core.utils import set_seeds
-from core.dist import (
+from utils import set_seeds
+from utils import (
     get_world_size,
     get_local_rank,
     get_global_rank,
