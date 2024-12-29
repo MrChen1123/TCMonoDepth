@@ -246,10 +246,10 @@ def parse_args():
     # Settings
     parser = argparse.ArgumentParser(description="This is a PyTorch Implementation of TCMonoDepth")
     # model params
-    parser.add_argument('--model_type', default='dpt-large', choices=['small', 'large', 'dpt-large', 'dpt-hybrid'],
+    parser.add_argument('--model_type', default='dpt-large', choices=['small', 'large', 'dpt-large', 'dpt-hybrid', 'depth_anthing'],
                         help='size of the model')
     parser.add_argument('--backbone', default='vitb16_384', choices=['vitl16_384', 'vitb_rn50_384', 'vitb16_384'],
-                        help='size of the model')
+                        help='size of the model')  # choice of backbone for dpt model
     parser.add_argument('--resume', type=str, default='', help='resume model weight path')
     parser.add_argument('--three_frmaes_mode', type=bool, default=False, help='if use three frames mode')
     # loss
