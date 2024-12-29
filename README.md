@@ -3,7 +3,7 @@
 #### This repository has implemented the training of the TCMonodepth and made improvements to it, enhancing the temporal consistency of TCMonodepth and the effect of monocular depth estimation for videos. ####
 
 <div align="center">
-  <img src="https://github.com/MrChen1123/TCMonoDepth/tree/main/icon/ori_structure.png">
+  <img src="./icon/ori_structure.png">
   <p>The algorithm architecture of the original paper</p>
 </div>
 
@@ -16,17 +16,18 @@ The caculation of valid mask in original paper：
 
 The improved method:
 <div align="center">
-  <img src="https://github.com/MrChen1123/TCMonoDepth/tree/main/icon/improved valid mask.png">
+  <img src="./icon/improved valid mask.png">
 </div>
 
 2. The improvement of the temporal consistency loss.
 The original tc loss is as follows:
 <div align="center">
-  <img src="https://github.com/MrChen1123/TCMonoDepth/tree/main/icon/tc loss.png">
+  <img src="./icon/tc loss.png">
 </div>
+
 The improved tc loss:
 <div align="center">
-  <img src="https://github.com/MrChen1123/TCMonoDepth/tree/main/icon/improved tc loss.png">
+  <img src="./icon/improved tc loss.png">
 </div>
 
 3. I have provided a three-frame version. When optical flow estimation is performed on two frames, there will be the problem of optical flow occlusion. Utilizing the previous frame, the middle frame and the subsequent frame can effectively solve the problem of optical flow occlusion and make use of more effective optical flow information. 
