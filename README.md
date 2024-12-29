@@ -11,8 +11,9 @@ The implementation and improvement of the algorithm are as follows:
 1. The RAFT network is adopted to conduct optical flow estimation, and the unidirectional optical flow verification in the original paper is changed to bidirectional optical flow verification. 
 The caculation of valid mask in original paper：
 <div align="center">
-  <img src="https://github.com/MrChen1123/TCMonoDepth/tree/main/icon/valid mask.png">
+  <img src="./icon/valid mask.png">
 </div>
+
 The improved method:
 <div align="center">
   <img src="https://github.com/MrChen1123/TCMonoDepth/tree/main/icon/improved valid mask.png">
