@@ -88,6 +88,12 @@ class Trainer():
         elif args.model_type == 'dpt-large':
             from depth_models.dpt_depth import DPTDepthModel
             self.model = DPTDepthModel(path=None, backbone=self.args.backbone, non_negative=True)
+        elif args.model_type == 'dpt-hybrid':
+            from depth_models.dpt_depth import DPTDepthModel
+            self.model = DPTDepthModel(path=None, backbone=self.args.backbone, non_negative=True)
+        elif args.model_type == "depth_anthing":
+            from depth_models.depth_anything.dpt import DepthAnything
+            self.model = DepthAnything()
         elif args.model_type == 'samll':
             from depth_models.tcSmallNet import TCSmallNet
             self.model = TCSmallNet(args)
