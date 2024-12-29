@@ -6,6 +6,9 @@ from huggingface_hub import PyTorchModelHubMixin, hf_hub_download
 
 from depth_models.depth_anything.blocks import FeatureFusionBlock, _make_scratch
 
+def cubes_2_maps(cubes):
+    b, t, c, h, w = cubes.shape
+    return cubes.view(b*t, c, h, w).contiguous()
 
 def _make_fusion_block(features, use_bn, size = None):
     return FeatureFusionBlock(
@@ -153,6 +156,9 @@ class DPT_DINOv2(nn.Module):
         self.depth_head = DPTHead(1, dim, features, use_bn, out_channels=out_channels, use_clstoken=use_clstoken)
         
     def forward(self, x):
+        x = cubes_2_maps(x)
+        x = x / 255.0
+
         h, w = x.shape[-2:]
         
         features = self.pretrained.get_intermediate_layers(x, 4, return_class_token=True)
