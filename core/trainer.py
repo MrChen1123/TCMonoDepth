@@ -89,7 +89,7 @@ class Trainer():
             from depth_models.dpt_depth import DPTDepthModel
             self.model = DPTDepthModel(path=None, backbone=self.args.backbone, non_negative=True)
         elif args.model_type == 'samll':
-            from networks import TCSmallNet
+            from depth_models.tcSmallNet import TCSmallNet
             self.model = TCSmallNet(args)
 
         self.model = self.model.to(args.device)
