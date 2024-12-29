@@ -83,10 +83,10 @@ class Trainer():
 
         # select a depth estimation model
         if args.model_type == 'large':
-            from dpt_models.midas_net import MidasNet
+            from depth_models.midas_net import MidasNet
             self.model = MidasNet()
         elif args.model_type == 'dpt-large':
-            from dpt_models.dpt_depth import DPTDepthModel
+            from depth_models.dpt_depth import DPTDepthModel
             self.model = DPTDepthModel(path=None, backbone=self.args.backbone, non_negative=True)
         elif args.model_type == 'samll':
             from networks import TCSmallNet
