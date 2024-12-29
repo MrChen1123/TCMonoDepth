@@ -34,20 +34,23 @@ class TC_loss(nn.Module):
         pass
         # self.l1_loss = nn.L1Loss(reduction='sum')
 
-    def forward(self, raft_model, frames, pred_depths, gt_depths, mask):
+    def forward(self, raft_model, frames, pred_depths, gt_depths):
+        # calculate backward flow
         backward_flows = calculate_flow(raft_model, frames, 'backward')   # [b, 1, 2, h, w]
         backward_flows = torch.tensor(backward_flows).to(frames.device)
+        # calculate forward flow
         forward_flows = calculate_flow(raft_model, frames, 'forward')     # [b, 1, 2, h, w]
         forward_flows = torch.tensor(forward_flows).to(frames.device)
 
+        # warp frame_i to frame_i_j, then warp frame_i_j to frame_i_j_i
         frames_i = frames[:, 0, :, :, :]
-        frames_j = frames[:, 1, :, :, :]                                                        # [b, 1, 2, h, w]
-        frames_j_i, mask_flow_j_i = warp(frames_j, backward_flows, need_flow_M=True)            # 只进行一次对齐
-        frames_i_j, mask_flow_i_j = warp(frames_i, forward_flows, need_flow_M=True)             # 只进行一次对齐
-        frames_i_j_i = warp(frames_i_j, backward_flows)                                         # 进行两次对齐
+        frames_j = frames[:, 1, :, :, :]                                  # [b, 1, 2, h, w]
+        frames_i_j = warp(frames_i, forward_flows)                        # 只进行一次对齐
+        frames_i_j_i = warp(frames_i_j, backward_flows)                   # 进行两次对齐
 
-        mask_flow = mask_flow_j_i * mask_flow_i_j
-        mask_flow = mask_flow.mean(dim=1, keepdim=True)
+        # the more accurate the flow is, the greater the weight of tc will be.
+        w_tcloss = torch.norm((frames_i - frames_i_j_i), dim=1, keepdim=True)        # 计算2范数
+        w_tcloss = torch.exp(-torch.log(w_tcloss/1.0+1))                             # 越小
 
         pred_depths_i = pred_depths[:, 0, :, :, :]
         pred_depths_j = pred_depths[:, 1, :, :, :]
@@ -57,26 +60,9 @@ class TC_loss(nn.Module):
         gt_depths_j = gt_depths[:, 1, :, :, :]
         gt_depths_j_i = warp(gt_depths_j, backward_flows)
 
-        mask = mask.float()
-        mask_i = mask[:, 0, :, :, :]
-        mask_j = mask[:, 1, :, :, :]
-        mask_j_i = warp(mask_j, backward_flows)
-
-        M = (mask_i == 1) & (mask_j_i == 1)
-        M = M.float()
-
-        MM = (M * mask_flow).bool()
-
-        w_tcloss = torch.norm((frames_i - frames_i_j_i), dim=1, keepdim=True)      # 计算2范数
-        w_tcloss = torch.exp(-torch.log(w_tcloss/1.0+1))                           # 越小
-
-        diff_pred_depths = torch.log(pred_depths_i[MM]) - torch.log(pred_depths_j_i[MM])
-        diff_gt_depths = torch.log(gt_depths_i[MM]) - torch.log(gt_depths_j_i[MM])
-        w_tcloss = w_tcloss[MM]
-        # tc_loss = w_tcloss * torch.abs(diff_pred_depths - diff_gt_depths)        # 时间一致性损失
+        diff_pred_depths = torch.log(pred_depths_i) - torch.log(pred_depths_j_i)
+        diff_gt_depths = torch.log(gt_depths_i) - torch.log(gt_depths_j_i)
         tc_loss = w_tcloss * torch.abs(diff_pred_depths - diff_gt_depths)          # 时间一致性损失
-
-        # tc_loss = M * mask_flow * tc_loss
         tc_loss = tc_loss.mean()
 
         return tc_loss
@@ -145,11 +131,11 @@ class Total_loss(nn.Module):
         self.three_frames_mode = three_frames_mode
         self.calc_times = 1 if not self.three_frames_mode else 2
 
-    def forward(self, raft_model, frames_valid, depth_est, depth_gt, mask):  # [b, frema_num, c, h, w]
+    def forward(self, raft_model, frames, depth_est, depth_gt, mask):  # [b, frema_num, c, h, w]
         total_loss, tc_loss, ng_loss, silog_loss = 0, 0, 0, 0
         # calculates TC of the previous frame with the current frame and the current frame with the next frame.
         for i in range(self.calc_times):
-            tc_loss += self.lam * self.tc_loss(raft_model, frames_valid[:, i:i+2, :,:], depth_est[:, i:i+2, :,:], depth_gt[:, i:i+2, :,:], mask[:, i:i+2, :,:])   
+            tc_loss += self.lam * self.tc_loss(raft_model, frames[:, i:i+2, :,:], depth_est[:, i:i+2, :,:], depth_gt[:, i:i+2, :,:], mask[:, i:i+2, :,:])   
         ng_loss += self.alpha * self.ng_loss(depth_est, depth_gt, mask)                                    # 0.5
         silog_loss += self.bata * self.silog_loss(depth_est, depth_gt, mask)                               # 1    # depth_est, depth_gt, mask
 

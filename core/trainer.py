@@ -217,18 +217,11 @@ class Trainer():
             pred_depths = self.model(frames)
             pred_depths = pred_depths.view(b, -1, 1, h, w)                               # [b, t, 1, h, w]
             pred_depths = pred_depths.contiguous()
-            
-            frames_valid = frames[valid_mask]
-            frames_valid = frames_valid.contiguous()
-            gt_depths_valid = gt_depths[valid_mask]
-            gt_depths_valid = gt_depths_valid.contiguous()
-            pred_depths_valid = pred_depths[valid_mask]
-            pred_depths_valid = pred_depths_valid.contiguous()
 
             total_loss, tc_loss, ng_loss, d_loss = self.total_loss(self.raft_model,
-                                                                   frames_valid,
-                                                                   pred_depths_valid,
-                                                                   gt_depths_valid,
+                                                                   frames,
+                                                                   pred_depths,
+                                                                   gt_depths,
                                                                    valid_mask)
 
             self.add_summary(self.model_writer, 'loss/total_loss', total_loss.item())
