@@ -143,15 +143,13 @@ class Total_loss(nn.Module):
         self.tc_loss = TC_loss()
         self.silog_loss = Silog_loss(self.variance_focus)
         self.three_frames_mode = three_frames_mode
+        self.calc_times = 1 if not self.three_frames_mode else 2
 
     def forward(self, raft_model, frames_valid, depth_est, depth_gt, mask):  # [b, frema_num, c, h, w]
         total_loss, tc_loss, ng_loss, silog_loss = 0, 0, 0, 0
-        calc_times = 1                              
-        if self.three_frames_mode:
-            calc_times = 2       # calculates TC of the previous frame with the current frame and the current frame with the next frame.
-        for i in range(calc_times):
-            tc_loss += self.lam * self.tc_loss(raft_model, frames_valid[:, i:i+2, :,:], depth_est[:, i:i+2, :,:], depth_gt[:, i:i+2, :,:], mask[:, i:i+2, :,:])        
-            # 1    # raft_model, frames, pred_depths
+        # calculates TC of the previous frame with the current frame and the current frame with the next frame.
+        for i in range(self.calc_times):
+            tc_loss += self.lam * self.tc_loss(raft_model, frames_valid[:, i:i+2, :,:], depth_est[:, i:i+2, :,:], depth_gt[:, i:i+2, :,:], mask[:, i:i+2, :,:])   
         ng_loss += self.alpha * self.ng_loss(depth_est, depth_gt, mask)                                    # 0.5
         silog_loss += self.bata * self.silog_loss(depth_est, depth_gt, mask)                               # 1    # depth_est, depth_gt, mask
 
