@@ -3,7 +3,7 @@
 #### This repository has implemented the training of the TCMonodepth and made improvements to it, enhancing the temporal consistency of TCMonodepth and the effect of monocular depth estimation for videos. ####
 
 <div align="center">
-  <img src="./icon/ori_structure.png", width="400px">
+  <img src="./icon/ori_structure.png", width="600px">
   <p>The algorithm architecture of the original paper</p>
 </div>
 
@@ -33,7 +33,7 @@ The improved tc loss:
 3. I have provided a three-frame version. When optical flow estimation is performed on two frames, there will be the problem of optical flow occlusion. Utilizing the previous frame, the middle frame and the subsequent frame can effectively solve the problem of optical flow occlusion and make use of more effective optical flow information. 
 The improved tc loss:
 <div align="center">
-  <img src="./icon/improved_structure.png", width="400px">
+  <img src="./icon/improved_structure.png", width="600px">
 </div>
 
 4. This is just a depth estimation algorithm at the image level although using tc loss to improve the temporal consistency of video depth. I would like to use a video depth estimation network to estimate video depth. Using two-stage training method, the first stage involves training on single images, the second stage involves training on videos to maintain temporal consistency by adding the temporal consistency loss and multi-frames(such as more than 5 frames).
