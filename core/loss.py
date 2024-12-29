@@ -42,15 +42,15 @@ class TC_loss(nn.Module):
         forward_flows = calculate_flow(raft_model, frames, 'forward')     # [b, 1, 2, h, w]
         forward_flows = torch.tensor(forward_flows).to(frames.device)
 
-        # warp frame_i to frame_i_j, then warp frame_i_j to frame_i_j_i
+        # warp frame_i to frame_i_j by forward flow, and then warp frame_i_j to frame_i_j_i by backward flow
         frames_i = frames[:, 0, :, :, :]
         frames_j = frames[:, 1, :, :, :]                                  # [b, 1, 2, h, w]
-        frames_i_j = warp(frames_i, forward_flows)                        # 只进行一次对齐
-        frames_i_j_i = warp(frames_i_j, backward_flows)                   # 进行两次对齐
+        frames_i_j = warp(frames_i, forward_flows)                        
+        frames_i_j_i = warp(frames_i_j, backward_flows)                   
 
         # the more accurate the flow is, the greater the weight of tc will be.
-        w_tcloss = torch.norm((frames_i - frames_i_j_i), dim=1, keepdim=True)        # 计算2范数
-        w_tcloss = torch.exp(-torch.log(w_tcloss/1.0+1))                             # 越小
+        w_tcloss = torch.norm((frames_i - frames_i_j_i), dim=1, keepdim=True)
+        w_tcloss = torch.exp(-torch.log(w_tcloss/1.0+1))                             
 
         pred_depths_i = pred_depths[:, 0, :, :, :]
         pred_depths_j = pred_depths[:, 1, :, :, :]
