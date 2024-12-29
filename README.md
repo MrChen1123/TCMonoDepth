@@ -31,6 +31,11 @@ The improved tc loss:
 </div>
 
 3. I have provided a three-frame version. When optical flow estimation is performed on two frames, there will be the problem of optical flow occlusion. Utilizing the previous frame, the middle frame and the subsequent frame can effectively solve the problem of optical flow occlusion and make use of more effective optical flow information. 
+The improved tc loss:
+<div align="center">
+  <img src="./icon/improved_structure.png">
+</div>
+
 
 ### Train ###
 python train.py
