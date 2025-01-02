@@ -38,7 +38,7 @@ The improved tc loss:
 
 4. I provide five different models to choose from, namely 'small', 'large', 'dpt-large', 'dpt-hybrid' and the latest model 'depth_anthing'.
 
-5. This is just a depth estimation algorithm at the image level although using tc loss to improve the temporal consistency of video depth. I would like to use a video depth estimation network to estimate video depth. Using two-stage training method, the first stage involves training on single images, the second stage involves training on videos to maintain temporal consistency by adding the temporal consistency loss and multi-frames(such as more than 5 frames).
+5. This is just a depth estimation algorithm at the image level although using tc loss to improve the temporal consistency of video depth. In terms of model design, there is indeed no interaction of information between different frames, which makes the model lack the ability of video sequence modeling. I would like to use a video depth estimation network to estimate video depth. Using two-stage training method, the first stage involves training on single images, the second stage involves training on videos to maintain temporal consistency by adding the temporal consistency loss and multi-frames(such as more than 5 frames).
 
 ### Train ###
 python train.py
